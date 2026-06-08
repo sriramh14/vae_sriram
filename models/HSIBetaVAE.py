@@ -1,3 +1,6 @@
+from HSIencoder import HSIEncoder
+from reparam import Reparameterization
+from HSIDecoder import HSIDecoder
 class HSIBetaVAE(nn.Module):
     def __init__(
         self,
