@@ -1,3 +1,4 @@
+from resblock import ResidualBlock
 class HSIDecoder(nn.Module):
     def __init__(
         self,
