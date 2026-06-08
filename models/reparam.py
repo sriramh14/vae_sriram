@@ -1,3 +1,5 @@
+import torch
+import torch.nn as nn
 class Reparameterization(nn.Module):
     def forward(self, mu, logvar):
 
