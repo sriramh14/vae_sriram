@@ -171,4 +171,15 @@ class ARADDataset(Dataset):
             cube
         ).float()
 
+        cube = torch.from_numpy(
+            cube
+        ).float()
+
+        cube = F.interpolate(
+            cube.unsqueeze(0),
+            size=(256, 256),
+            mode="bilinear",
+            align_corners=False
+        ).squeeze(0)
+
         return cube
