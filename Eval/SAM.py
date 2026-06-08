@@ -1,3 +1,4 @@
+import torch
 def sam_loss(pred, target):
 
     B, C, H, W = pred.shape
