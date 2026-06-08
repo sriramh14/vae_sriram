@@ -1,4 +1,4 @@
-from resblock import ResidualBlock
+from .resblock import ResidualBlock
 class HSIEncoder(nn.Module):
     def __init__(
         self,
