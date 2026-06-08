@@ -1,3 +1,5 @@
+import torch
+import torch.nn as nn
 from .HSIencoder import HSIEncoder
 from .reparam import Reparameterization
 from .HSIDecoder import HSIDecoder
