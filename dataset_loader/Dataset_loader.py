@@ -6,7 +6,8 @@ import torch
 from torch.utils.data import Dataset
 
 from huggingface_hub import (
-    snapshot_download
+    list_repo_files,
+    hf_hub_download
 )
 
 
@@ -16,7 +17,8 @@ class ARADDataset(Dataset):
         self,
         root_dir="data",
         train=True,
-        train_images=300,
+        train_images=200,
+        total_images=230,
         cube_key="cube",
         download=True
     ):
@@ -28,34 +30,73 @@ class ARADDataset(Dataset):
             "NTIRE2020_Train_Spectral"
         )
 
-        ##################################################
-        # Download dataset if missing
-        ##################################################
-
-        if download and (
-            not os.path.exists(spectral_dir)
-            or len(os.listdir(spectral_dir)) == 0
-        ):
-
-            print(
-                "Downloading ARAD spectral cubes..."
-            )
-
-            snapshot_download(
-                repo_id="mhmdjouni/arad_hsdb",
-                repo_type="dataset",
-                allow_patterns=[
-                    "NTIRE2020_Train_Spectral/*.mat"
-                ],
-                local_dir=root_dir
-            )
-
-            print(
-                "Download complete."
-            )
+        os.makedirs(
+            spectral_dir,
+            exist_ok=True
+        )
 
         ##################################################
-        # Collect all MAT files
+        # Download only first 230 cubes
+        ##################################################
+
+        if download:
+
+            existing = [
+                f for f in os.listdir(
+                    spectral_dir
+                )
+                if f.endswith(".mat")
+            ]
+
+            if len(existing) < total_images:
+
+                print(
+                    f"Downloading "
+                    f"{total_images} cubes..."
+                )
+
+                repo_files = list_repo_files(
+                    "mhmdjouni/arad_hsdb",
+                    repo_type="dataset"
+                )
+
+                mat_files = sorted([
+                    f
+                    for f in repo_files
+                    if (
+                        f.endswith(".mat")
+                        and
+                        "NTIRE2020_Train_Spectral"
+                        in f
+                    )
+                ])
+
+                mat_files = mat_files[
+                    :total_images
+                ]
+
+                for file in mat_files:
+
+                    hf_hub_download(
+                        repo_id=
+                        "mhmdjouni/arad_hsdb",
+
+                        repo_type=
+                        "dataset",
+
+                        filename=file,
+
+                        local_dir=root_dir,
+
+                        local_dir_use_symlinks=False
+                    )
+
+                print(
+                    "Download complete"
+                )
+
+        ##################################################
+        # Gather local files
         ##################################################
 
         files = sorted([
@@ -69,33 +110,41 @@ class ARADDataset(Dataset):
             if f.endswith(".mat")
         ])
 
+        files = files[:total_images]
+
         print(
-            f"Found {len(files)} "
-            f"spectral cubes"
+            f"Using {len(files)} cubes"
         )
 
         ##################################################
-        # Train / Validation split
+        # Split
         ##################################################
 
         if train:
 
-            self.files = files[:train_images]
+            self.files = files[
+                :train_images
+            ]
 
         else:
 
-            self.files = files[train_images:]
+            self.files = files[
+                train_images:
+            ]
 
         print(
-            f"{'Train' if train else 'Val'} "
-            f"samples: {len(self.files)}"
+            f"{'Train' if train else 'Val'}: "
+            f"{len(self.files)} cubes"
         )
 
     def __len__(self):
 
         return len(self.files)
 
-    def __getitem__(self, idx):
+    def __getitem__(
+        self,
+        idx
+    ):
 
         mat = sio.loadmat(
             self.files[idx]
@@ -112,10 +161,6 @@ class ARADDataset(Dataset):
         if cube.max() > 1:
 
             cube /= cube.max()
-
-        ##################################################
-        # HWC -> CHW
-        ##################################################
 
         cube = np.transpose(
             cube,
