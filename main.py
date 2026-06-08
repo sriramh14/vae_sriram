@@ -5,35 +5,40 @@ import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
 
-from model import HSIBetaVAE
 from dataset import ARADDataset
+from model import HSIBetaVAE
 from losses import (
     mrae_loss,
     sam_loss,
     kl_loss
 )
 
-DEVICE = "cuda"
 
-ROOT_DIR = (
-    "data/NTIRE2020_Train_Spectral"
+##################################################
+# CONFIG
+##################################################
+
+DEVICE = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "cpu"
 )
+
+NUM_EPOCHS = 100
 
 BATCH_SIZE = 1
 
 NUM_WORKERS = 2
 
-NUM_EPOCHS = 100
+LEARNING_RATE = 1e-4
+
+WEIGHT_DECAY = 1e-4
 
 LATENT_CHANNELS = 8
 
 BETA_MAX = 1e-5
 
 WARMUP_EPOCHS = 20
-
-LEARNING_RATE = 1e-4
-
-WEIGHT_DECAY = 1e-4
 
 CHECKPOINT_DIR = "checkpoints"
 
@@ -43,43 +48,30 @@ os.makedirs(
 )
 
 
-
-all_files = sorted([
-    os.path.join(ROOT_DIR, f)
-    for f in os.listdir(ROOT_DIR)
-    if f.endswith(".mat")
-])
-
-print(
-    f"Total spectral cubes: {len(all_files)}"
-)
-
-split_idx = int(
-    0.8 * len(all_files)
-)
-
-train_files = all_files[:split_idx]
-
-val_files = all_files[split_idx:]
-
-print(
-    f"Train scenes: {len(train_files)}"
-)
-
-print(
-    f"Val scenes: {len(val_files)}"
-)
-
+##################################################
+# DATASETS
+##################################################
 
 train_dataset = ARADDataset(
-    files=train_files,
-    cube_key="cube"   # replace if needed
+    root_dir="data",
+    train=True,
+    train_images=300,
+    cube_key="cube",
+    download=True
 )
 
 val_dataset = ARADDataset(
-    files=val_files,
-    cube_key="cube"
+    root_dir="data",
+    train=False,
+    train_images=300,
+    cube_key="cube",
+    download=False
 )
+
+
+##################################################
+# DATALOADERS
+##################################################
 
 train_loader = DataLoader(
     train_dataset,
@@ -97,29 +89,40 @@ val_loader = DataLoader(
     pin_memory=True
 )
 
+
+##################################################
+# MODEL
+##################################################
+
 model = HSIBetaVAE(
     in_channels=31,
-    latent_channels=8
-).to(device)
+    latent_channels=LATENT_CHANNELS
+).to(DEVICE)
+
+
+##################################################
+# OPTIMIZER
+##################################################
 
 optimizer = torch.optim.AdamW(
     model.parameters(),
-    lr=1e-4,
-    weight_decay=1e-4
+    lr=LEARNING_RATE,
+    weight_decay=WEIGHT_DECAY
 )
 
-beta_max = 1e-5
-warmup_epochs = 20
+
+##################################################
+# VALIDATION
+##################################################
+
 @torch.no_grad()
 def validate():
 
     model.eval()
 
-    running_loss = 0
-
-    running_mrae = 0
-
-    running_sam = 0
+    total_loss = 0
+    total_mrae = 0
+    total_sam = 0
 
     for hsi in val_loader:
 
@@ -151,19 +154,22 @@ def validate():
             + 0.1 * sam
         )
 
-        running_loss += loss.item()
-
-        running_mrae += mrae.item()
-
-        running_sam += sam.item()
+        total_loss += loss.item()
+        total_mrae += mrae.item()
+        total_sam += sam.item()
 
     n = len(val_loader)
 
     return (
-        running_loss / n,
-        running_mrae / n,
-        running_sam / n
+        total_loss / n,
+        total_mrae / n,
+        total_sam / n
     )
+
+
+##################################################
+# TRAINING LOOP
+##################################################
 
 best_val_loss = float("inf")
 
@@ -179,9 +185,8 @@ for epoch in range(NUM_EPOCHS):
         )
     )
 
-    train_loss = 0
-
-    train_kl = 0
+    running_loss = 0
+    running_kl = 0
 
     for hsi in train_loader:
 
@@ -229,13 +234,18 @@ for epoch in range(NUM_EPOCHS):
 
         optimizer.step()
 
-        train_loss += loss.item()
+        running_loss += loss.item()
+        running_kl += kl.item()
 
-        train_kl += kl.item()
+    train_loss = (
+        running_loss
+        / len(train_loader)
+    )
 
-    train_loss /= len(train_loader)
-
-    train_kl /= len(train_loader)
+    train_kl = (
+        running_kl
+        / len(train_loader)
+    )
 
     val_loss, val_mrae, val_sam = validate()
 
@@ -249,33 +259,35 @@ for epoch in range(NUM_EPOCHS):
         f"Beta={beta:.2e}"
     )
 
-    ####################################
+    ##################################################
     # SAVE BEST MODEL
-    ####################################
+    ##################################################
 
     if val_loss < best_val_loss:
 
         best_val_loss = val_loss
 
+        checkpoint = {
+            "epoch": epoch,
+
+            "vae":
+                model.state_dict(),
+
+            "encoder":
+                model.encoder.state_dict(),
+
+            "decoder":
+                model.decoder.state_dict(),
+
+            "optimizer":
+                optimizer.state_dict(),
+
+            "val_loss":
+                val_loss
+        }
+
         torch.save(
-            {
-                "epoch": epoch,
-
-                "vae":
-                    model.state_dict(),
-
-                "encoder":
-                    model.encoder.state_dict(),
-
-                "decoder":
-                    model.decoder.state_dict(),
-
-                "optimizer":
-                    optimizer.state_dict(),
-
-                "val_loss":
-                    val_loss
-            },
+            checkpoint,
             os.path.join(
                 CHECKPOINT_DIR,
                 "best_model.pth"
@@ -285,5 +297,26 @@ for epoch in range(NUM_EPOCHS):
         print(
             "Saved best checkpoint"
         )
+
+
+##################################################
+# SAVE FINAL MODEL
+##################################################
+
+torch.save(
+    model.decoder.state_dict(),
+    os.path.join(
+        CHECKPOINT_DIR,
+        "decoder_final.pth"
+    )
+)
+
+torch.save(
+    model.encoder.state_dict(),
+    os.path.join(
+        CHECKPOINT_DIR,
+        "encoder_final.pth"
+    )
+)
 
 print("Training complete")
