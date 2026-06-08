@@ -53,21 +53,19 @@ os.makedirs(
 ##################################################
 
 train_dataset = ARADDataset(
-    root_dir="data",
     train=True,
-    train_images=300,
-    cube_key="cube",
-    download=True
+    train_images=200,
+    total_images=230,
+    cube_key="cube"
 )
 
 val_dataset = ARADDataset(
-    root_dir="data",
     train=False,
-    train_images=300,
+    train_images=200,
+    total_images=230,
     cube_key="cube",
     download=False
 )
-
 
 ##################################################
 # DATALOADERS
