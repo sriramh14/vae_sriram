@@ -1,3 +1,5 @@
+import torch
+import torch.nn as nn
 from .resblock import ResidualBlock
 class HSIEncoder(nn.Module):
     def __init__(
