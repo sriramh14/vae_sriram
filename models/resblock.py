@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-class ResBlock(nn.Module):
+class ResidualBlock(nn.Module):
     def __init__(self, channels):
         super().__init__()
 
