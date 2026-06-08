@@ -1,53 +1,58 @@
-class ARAD300Dataset(Dataset):
+class ARADDataset(Dataset):
 
     def __init__(
         self,
-        patch_size=128
+        root_dir,
+        patch_size=128,
+        train=True,
+        train_images=300,
+        patches_per_image=20,
+        cube_key="cube"
     ):
 
-        self.dataset = load_dataset(
-            "mhmdjouni/arad_hsdb",
-            split="train[:300]"
-        )
-
         self.patch_size = patch_size
+        self.patches_per_image = patches_per_image
+        self.cube_key = cube_key
+
+        files = sorted([
+            os.path.join(root_dir, f)
+            for f in os.listdir(root_dir)
+            if f.endswith(".mat")
+        ])
+
+        if train:
+            self.files = files[:train_images]
+        else:
+            self.files = files[train_images:]
 
     def __len__(self):
-        return len(self.dataset)
+
+        return (
+            len(self.files)
+            * self.patches_per_image
+        )
 
     def __getitem__(self, idx):
 
-        sample = self.dataset[idx]
+        file_idx = (
+            idx
+            // self.patches_per_image
+        )
 
-        cube = None
+        mat = sio.loadmat(
+            self.files[file_idx]
+        )
 
-        for value in sample.values():
+        cube = mat[self.cube_key]
 
-            if isinstance(value, np.ndarray):
-
-                if value.ndim == 3:
-                    cube = value
-                    break
-
-        if cube is None:
-            raise RuntimeError(
-                "Could not find hyperspectral cube"
-            )
-
-        cube = cube.astype(np.float32)
+        cube = cube.astype(
+            np.float32
+        )
 
         if cube.max() > 1:
             cube /= cube.max()
 
-        # Convert HWC -> CHW if needed
-        if cube.shape[-1] == 31:
-
-            cube = np.transpose(
-                cube,
-                (2, 0, 1)
-            )
-
-        C, H, W = cube.shape
+        H, W, C = cube.shape
 
         ps = self.patch_size
 
@@ -62,10 +67,15 @@ class ARAD300Dataset(Dataset):
         )
 
         cube = cube[
-            :,
             top:top+ps,
-            left:left+ps
+            left:left+ps,
+            :
         ]
+
+        cube = np.transpose(
+            cube,
+            (2,0,1)
+        )
 
         return torch.from_numpy(
             cube
