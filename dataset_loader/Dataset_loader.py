@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import scipy.io as sio
+from PIL import Image
 
 import torch
 from torch.utils.data import Dataset
@@ -31,152 +32,228 @@ class ARADDataset(Dataset):
             "NTIRE2020_Train_Spectral"
         )
 
+        rgb_dir = os.path.join(
+            root_dir,
+            "NTIRE2020_Train_RealWorld"
+        )
+
         os.makedirs(
             spectral_dir,
             exist_ok=True
         )
 
+        os.makedirs(
+            rgb_dir,
+            exist_ok=True
+        )
+
         ##################################################
-        # Download only first 230 cubes
+        # Download dataset
         ##################################################
 
         if download:
 
-            existing = [
-                f for f in os.listdir(
-                    spectral_dir
-                )
-                if f.endswith(".mat")
-            ]
-
-            if len(existing) < total_images:
-
-                print(
-                    f"Downloading "
-                    f"{total_images} cubes..."
-                )
-
-                repo_files = list_repo_files(
-                    "mhmdjouni/arad_hsdb",
-                    repo_type="dataset"
-                )
-
-                mat_files = sorted([
-                    f
-                    for f in repo_files
-                    if (
-                        f.endswith(".mat")
-                        and
-                        "NTIRE2020_Train_Spectral"
-                        in f
-                    )
-                ])
-
-                mat_files = mat_files[
-                    :total_images
-                ]
-
-                for file in mat_files:
-
-                    hf_hub_download(
-                        repo_id=
-                        "mhmdjouni/arad_hsdb",
-
-                        repo_type=
-                        "dataset",
-
-                        filename=file,
-
-                        local_dir=root_dir,
-
-                        local_dir_use_symlinks=False
-                    )
-
-                print(
-                    "Download complete"
-                )
-
-        ##################################################
-        # Gather local files
-        ##################################################
-
-        files = sorted([
-            os.path.join(
-                spectral_dir,
-                f
+            repo_files = list_repo_files(
+                "mhmdjouni/arad_hsdb",
+                repo_type="dataset"
             )
+
+            spectral_files = sorted([
+                f
+                for f in repo_files
+                if (
+                    f.endswith(".mat")
+                    and
+                    "NTIRE2020_Train_Spectral"
+                    in f
+                )
+            ])[:total_images]
+
+            rgb_files = sorted([
+                f
+                for f in repo_files
+                if (
+                    f.endswith(".jpg")
+                    and
+                    "NTIRE2020_Train_RealWorld"
+                    in f
+                )
+            ])[:total_images]
+
+            print(
+                f"Downloading "
+                f"{len(spectral_files)} HSI files "
+                f"and "
+                f"{len(rgb_files)} RGB files..."
+            )
+
+            for file in spectral_files:
+
+                hf_hub_download(
+                    repo_id="mhmdjouni/arad_hsdb",
+                    repo_type="dataset",
+                    filename=file,
+                    local_dir=root_dir,
+                    local_dir_use_symlinks=False
+                )
+
+            for file in rgb_files:
+
+                hf_hub_download(
+                    repo_id="mhmdjouni/arad_hsdb",
+                    repo_type="dataset",
+                    filename=file,
+                    local_dir=root_dir,
+                    local_dir_use_symlinks=False
+                )
+
+            print("Download complete")
+
+        ##################################################
+        # Build paired samples
+        ##################################################
+
+        spectral_files = sorted([
+            f
             for f in os.listdir(
                 spectral_dir
             )
             if f.endswith(".mat")
-        ])
+        ])[:total_images]
 
-        files = files[:total_images]
+        self.pairs = []
+
+        for mat_name in spectral_files:
+
+            stem = os.path.splitext(
+                mat_name
+            )[0]
+
+            rgb_name = stem + ".jpg"
+
+            rgb_path = os.path.join(
+                rgb_dir,
+                rgb_name
+            )
+
+            if not os.path.exists(
+                rgb_path
+            ):
+                continue
+
+            self.pairs.append(
+                (
+                    os.path.join(
+                        spectral_dir,
+                        mat_name
+                    ),
+                    rgb_path
+                )
+            )
 
         print(
-            f"Using {len(files)} cubes"
+            f"Found {len(self.pairs)} paired samples"
         )
 
         ##################################################
-        # Split
+        # Train / Val split
         ##################################################
 
         if train:
 
-            self.files = files[
+            self.pairs = self.pairs[
                 :train_images
             ]
 
         else:
 
-            self.files = files[
+            self.pairs = self.pairs[
                 train_images:
             ]
 
         print(
             f"{'Train' if train else 'Val'}: "
-            f"{len(self.files)} cubes"
+            f"{len(self.pairs)} samples"
         )
 
     def __len__(self):
 
-        return len(self.files)
+        return len(
+            self.pairs
+        )
 
     def __getitem__(
         self,
         idx
     ):
 
+        hsi_path, rgb_path = self.pairs[idx]
+
+        ##################################################
+        # Load HSI
+        ##################################################
+
         mat = sio.loadmat(
-            self.files[idx]
+            hsi_path
         )
 
-        cube = mat[
+        hsi = mat[
             self.cube_key
-        ]
-
-        cube = cube.astype(
+        ].astype(
             np.float32
         )
 
-        if cube.max() > 1:
+        if hsi.max() > 1:
 
-            cube /= cube.max()
+            hsi /= hsi.max()
 
-        cube = np.transpose(
-            cube,
+        hsi = np.transpose(
+            hsi,
             (2, 0, 1)
         )
 
-        cube = torch.from_numpy(
-            cube
+        hsi = torch.from_numpy(
+            hsi
         ).float()
 
-        cube = F.interpolate(
-            cube.unsqueeze(0),
+        hsi = F.interpolate(
+            hsi.unsqueeze(0),
             size=(256, 256),
             mode="bilinear",
             align_corners=False
         ).squeeze(0)
 
-        return cube
+        ##################################################
+        # Load RGB
+        ##################################################
+
+        rgb = Image.open(
+            rgb_path
+        ).convert("RGB")
+
+        rgb = np.array(
+            rgb,
+            dtype=np.float32
+        ) / 255.0
+
+        rgb = np.transpose(
+            rgb,
+            (2, 0, 1)
+        )
+
+        rgb = torch.from_numpy(
+            rgb
+        ).float()
+
+        rgb = F.interpolate(
+            rgb.unsqueeze(0),
+            size=(256, 256),
+            mode="bilinear",
+            align_corners=False
+        ).squeeze(0)
+
+        ##################################################
+        # Return pair
+        ##################################################
+
+        return rgb, hsi
