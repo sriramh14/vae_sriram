@@ -85,7 +85,8 @@ class ARADDataset(Dataset):
                     f for f in repo_files
                     if (
                         f.endswith(".jpg")
-                        and f[:-4:-1] in mat_files[][:-4:-1]
+                        and
+                        f[:-4:-1] in mat_files[:][:-4:-1]
                         
                     )
                 ])[:total_images]
