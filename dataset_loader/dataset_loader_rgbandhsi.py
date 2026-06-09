@@ -57,7 +57,7 @@ class ARADDataset(Dataset):
 
             existing_files = [
                 f for f in os.listdir(spectral_dir)
-                if (f.endswith(".mat") || f.endswith(".jpg"))
+                if (f.endswith(".mat") or f.endswith(".jpg"))
             ]
 
             if len(existing_mats) < 2 * total_images:
