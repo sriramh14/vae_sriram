@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ResidualBlock import 
+from resblock import ResidualBlock
 class RGBEncoder(nn.Module):
 
     def __init__(self, latent_channels):
