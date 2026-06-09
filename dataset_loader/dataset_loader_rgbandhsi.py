@@ -60,7 +60,7 @@ class ARADDataset(Dataset):
                 if (f.endswith(".mat") or f.endswith(".jpg"))
             ]
 
-            if len(existing_mats) < 2 * total_images:
+            if len(existing_files) < 2 * total_images:
 
                 print(
                     f"Downloading "
