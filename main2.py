@@ -154,9 +154,12 @@ def validate():
 
     for batch in val_loader:
 
-        rgb = batch["rgb"].to(DEVICE)
-        hsi = batch["hsi"].to(DEVICE)
+        rgb, hsi = batch
 
+        rgb = rgb.to(DEVICE)
+        hsi = hsi.to(DEVICE)
+
+        
         gt_mu, _ = hsi_encoder(hsi)
 
         pred_z = rgb_encoder(rgb)
