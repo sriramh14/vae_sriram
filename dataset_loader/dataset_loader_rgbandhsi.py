@@ -100,7 +100,14 @@ class ARADDataset(Dataset):
                     hf_hub_download(
                         repo_id="mhmdjouni/arad_hsdb",
                         repo_type="dataset",
-                        filename=file,
+                        filename=file[0],
+                        local_dir=root_dir,
+                        local_dir_use_symlinks=False
+                    )
+                    hf_hub_download(
+                        repo_id="mhmdjouni/arad_hsdb",
+                        repo_type="dataset",
+                        filename=file[1],
                         local_dir=root_dir,
                         local_dir_use_symlinks=False
                     )
