@@ -3,13 +3,11 @@ import torch.nn as nn
 from resblock import ResidualBlock
 class RGBEncoder(nn.Module):
 
-    def __init__(self, latent_channels):
-        
-        def __init__(
-            self,
-            in_channels=31,
-            latent_channels=8
-        ):
+    def __init__(
+        self,
+        in_channels=31,
+        latent_channels=8
+    ):
         super().__init__()
 
         self.net = nn.Sequential(
