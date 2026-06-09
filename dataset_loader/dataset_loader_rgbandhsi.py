@@ -55,16 +55,16 @@ class ARADDataset(Dataset):
 
         if download:
 
-            existing_mats = [
+            existing_files = [
                 f for f in os.listdir(spectral_dir)
-                if f.endswith(".mat")
+                if (f.endswith(".mat") || f.endswith(".jpg"))
             ]
 
-            if len(existing_mats) < total_images:
+            if len(existing_mats) < 2 * total_images:
 
                 print(
                     f"Downloading "
-                    f"{total_images} samples..."
+                    f"{2*total_images} samples..."
                 )
 
                 repo_files = list_repo_files(
