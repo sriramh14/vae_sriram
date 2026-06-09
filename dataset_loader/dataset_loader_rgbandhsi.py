@@ -57,10 +57,10 @@ class ARADDataset(Dataset):
 
             existing_files = [
                 f for f in os.listdir(spectral_dir)
-                if (f.endswith(".mat") or f.endswith(".jpg"))
+                if f.endswith(".mat")
             ]
 
-            if len(existing_files) < 2 * total_images:
+            if len(existing_files) <  total_images:
 
                 print(
                     f"Downloading "
@@ -85,8 +85,8 @@ class ARADDataset(Dataset):
                     f for f in repo_files
                     if (
                         f.endswith(".jpg")
-                        and
-                        "NTIRE2020_Train_RealWorld" in f
+                        and f[:-4:-1] in mat_files[][:-4:-1]
+                        
                     )
                 ])[:total_images]
 
