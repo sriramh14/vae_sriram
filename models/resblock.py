@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 
 class ResidualBlock(nn.Module):
     def __init__(self, channels):
@@ -7,14 +9,9 @@ class ResidualBlock(nn.Module):
 
         self.block = nn.Sequential(
             nn.Conv2d(channels, channels, 3, padding=1),
-            nn.BatchNorm2d(channels),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(channels, channels, 3, padding=1),
-            nn.BatchNorm2d(channels)
+            nn.GELU(),
+            nn.Conv2d(channels, channels, 3, padding=1)
         )
 
-        self.relu = nn.ReLU(inplace=True)
-
     def forward(self, x):
-        return self.relu(x + self.block(x))
+        return x + self.block(x)
