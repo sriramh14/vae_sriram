@@ -5,7 +5,7 @@ class RGBEncoder(nn.Module):
 
     def __init__(
         self,
-        in_channels=3
+        in_channels=3,
         latent_channels=8
     ):
         super().__init__()
