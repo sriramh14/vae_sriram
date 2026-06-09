@@ -81,7 +81,7 @@ hsi_encoder = HSIEncoder(
     latent_channels=LATENT_CHANNELS
 ).to(DEVICE)
 
-decoder = HSIDecoder(
+hsi_decoder = HSIDecoder(
     latent_channels=LATENT_CHANNELS,
     out_channels=31
 ).to(DEVICE)
