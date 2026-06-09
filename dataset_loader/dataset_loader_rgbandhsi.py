@@ -86,7 +86,7 @@ class ARADDataset(Dataset):
                     if (
                         f.endswith(".jpg")
                         and
-                        "NTIRE2020_Train_RGB" in f
+                        "NTIRE2020_Train_RealWorld" in f
                     )
                 ])[:total_images]
 
