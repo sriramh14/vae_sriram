@@ -101,31 +101,16 @@ vae_ckpt = torch.load(
     map_location=DEVICE
 )
 
-if "model_state_dict" in vae_ckpt:
-    vae_ckpt = vae_ckpt["model_state_dict"]
-
-encoder_state = {}
-decoder_state = {}
-
-for k, v in vae_ckpt.items():
-
-    if k.startswith("encoder."):
-        encoder_state[
-            k.replace("encoder.", "")
-        ] = v
-
-    elif k.startswith("decoder."):
-        decoder_state[
-            k.replace("decoder.", "")
-        ] = v
 
 hsi_encoder.load_state_dict(
-    encoder_state
+    vae_ckpt["encoder"]
 )
 
-decoder.load_state_dict(
-    decoder_state
+hsi_decoder.load_state_dict(
+    vae_ckpt["decoder"]
 )
+if "model_state_dict" in vae_ckpt:
+    vae_ckpt = vae_ckpt["model_state_dict"]
 
 print("Loaded pretrained VAE")
 
@@ -135,12 +120,12 @@ print("Loaded pretrained VAE")
 ##################################################
 
 hsi_encoder.eval()
-decoder.eval()
+hsi_decoder.eval()
 
 for p in hsi_encoder.parameters():
     p.requires_grad = False
 
-for p in decoder.parameters():
+for p in hsi_decoder.parameters():
     p.requires_grad = False
 
 
@@ -176,7 +161,7 @@ def validate():
 
         pred_z = rgb_encoder(rgb)
 
-        pred_hsi = decoder(pred_z)
+        pred_hsi = hsi_decoder(pred_z)
 
         latent_loss = F.mse_loss(
             pred_z,
@@ -241,7 +226,7 @@ for epoch in range(NUM_EPOCHS):
 
         pred_z = rgb_encoder(rgb)
 
-        pred_hsi = decoder(pred_z)
+        pred_hsi = hsi_decoder(pred_z)
 
         latent_loss = F.mse_loss(
             pred_z,
