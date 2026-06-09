@@ -86,7 +86,8 @@ decoder = HSIDecoder(
     out_channels=31
 ).to(DEVICE)
 
-rgb_encoder = RGBEncoder(in_channels = 3
+rgb_encoder = RGBEncoder(
+    in_channels = 3,
     latent_channels=LATENT_CHANNELS
 ).to(DEVICE)
 
