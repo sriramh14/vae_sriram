@@ -217,8 +217,10 @@ for epoch in range(NUM_EPOCHS):
 
     for batch in train_loader:
 
-        rgb = batch["rgb"].to(DEVICE)
-        hsi = batch["hsi"].to(DEVICE)
+        rgb, hsi = batch
+
+        rgb = rgb.to(DEVICE)
+        hsi = hsi.to(DEVICE)
 
         with torch.no_grad():
 
