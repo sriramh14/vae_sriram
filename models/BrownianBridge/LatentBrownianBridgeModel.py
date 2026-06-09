@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 from tqdm.autonotebook import tqdm
 
-from model.BrownianBridge.BrownianBridgeModel import BrownianBridgeModel
-from model.BrownianBridge.base.modules.encoders.modules import SpatialRescaler
-from model.VQGAN.vqgan import VQModel
+from models.BrownianBridge.BrownianBridgeModel import BrownianBridgeModel
+from models.BrownianBridge.base.modules.encoders.modules import SpatialRescaler
+from models.VQGAN.vqgan import VQModel
 
 
 def disabled_train(self, mode=True):
