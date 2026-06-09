@@ -48,72 +48,94 @@ class ARADDataset(Dataset):
         )
 
         ##################################################
-        # Download dataset
+        # Download
         ##################################################
 
         if download:
 
-            repo_files = list_repo_files(
-                "mhmdjouni/arad_hsdb",
-                repo_type="dataset"
-            )
-
-            spectral_files = sorted([
-                f
-                for f in repo_files
-                if (
-                    f.endswith(".mat")
-                    and
-                    "NTIRE2020_Train_Spectral"
-                    in f
+            existing_hsi = [
+                f for f in os.listdir(
+                    spectral_dir
                 )
-            ])[:total_images]
+                if f.endswith(".mat")
+            ]
 
-            rgb_files = sorted([
-                f
-                for f in repo_files
-                if (
-                    f.endswith(".jpg")
-                    and
-                    "NTIRE2020_Train_RealWorld"
-                    in f
+            existing_rgb = [
+                f for f in os.listdir(
+                    rgb_dir
                 )
-            ])[:total_images]
+                if f.endswith(".jpg")
+            ]
 
-            print(
-                f"Downloading "
-                f"{len(spectral_files)} HSI files "
-                f"and "
-                f"{len(rgb_files)} RGB files..."
-            )
+            if (
+                len(existing_hsi) < total_images
+                or
+                len(existing_rgb) < total_images
+            ):
 
-            for file in spectral_files:
-
-                hf_hub_download(
-                    repo_id="mhmdjouni/arad_hsdb",
-                    repo_type="dataset",
-                    filename=file,
-                    local_dir=root_dir,
-                    local_dir_use_symlinks=False
+                print(
+                    f"Downloading "
+                    f"{total_images} HSI files "
+                    f"and "
+                    f"{total_images} RGB files..."
                 )
 
-            for file in rgb_files:
-
-                hf_hub_download(
-                    repo_id="mhmdjouni/arad_hsdb",
-                    repo_type="dataset",
-                    filename=file,
-                    local_dir=root_dir,
-                    local_dir_use_symlinks=False
+                repo_files = list_repo_files(
+                    "mhmdjouni/arad_hsdb",
+                    repo_type="dataset"
                 )
 
-            print("Download complete")
+                hsi_files = sorted([
+                    f
+                    for f in repo_files
+                    if (
+                        f.endswith(".mat")
+                        and
+                        "NTIRE2020_Train_Spectral"
+                        in f
+                    )
+                ])[:total_images]
+
+                rgb_files = sorted([
+                    f
+                    for f in repo_files
+                    if (
+                        f.endswith(".jpg")
+                        and
+                        "NTIRE2020_Train_RealWorld"
+                        in f
+                    )
+                ])[:total_images]
+
+                for file in hsi_files:
+
+                    hf_hub_download(
+                        repo_id="mhmdjouni/arad_hsdb",
+                        repo_type="dataset",
+                        filename=file,
+                        local_dir=root_dir,
+                        local_dir_use_symlinks=False
+                    )
+
+                for file in rgb_files:
+
+                    hf_hub_download(
+                        repo_id="mhmdjouni/arad_hsdb",
+                        repo_type="dataset",
+                        filename=file,
+                        local_dir=root_dir,
+                        local_dir_use_symlinks=False
+                    )
+
+                print(
+                    "Download complete"
+                )
 
         ##################################################
-        # Build paired samples
+        # Build RGB-HSI pairs
         ##################################################
 
-        spectral_files = sorted([
+        hsi_files = sorted([
             f
             for f in os.listdir(
                 spectral_dir
@@ -121,53 +143,58 @@ class ARADDataset(Dataset):
             if f.endswith(".mat")
         ])[:total_images]
 
-        self.pairs = []
+        rgb_lookup = {
+            f.replace(
+                "_RealWorld.jpg",
+                ""
+            ): f
+            for f in os.listdir(
+                rgb_dir
+            )
+            if f.endswith(".jpg")
+        }
 
-        for mat_name in spectral_files:
+        pairs = []
+
+        for hsi_name in hsi_files:
 
             stem = os.path.splitext(
-                mat_name
+                hsi_name
             )[0]
 
-            rgb_name = stem + ".jpg"
-
-            rgb_path = os.path.join(
-                rgb_dir,
-                rgb_name
-            )
-
-            if not os.path.exists(
-                rgb_path
-            ):
+            if stem not in rgb_lookup:
                 continue
 
-            self.pairs.append(
+            pairs.append(
                 (
                     os.path.join(
                         spectral_dir,
-                        mat_name
+                        hsi_name
                     ),
-                    rgb_path
+                    os.path.join(
+                        rgb_dir,
+                        rgb_lookup[stem]
+                    )
                 )
             )
 
         print(
-            f"Found {len(self.pairs)} paired samples"
+            f"Found {len(pairs)} paired samples"
         )
 
         ##################################################
-        # Train / Val split
+        # Train / Validation split
         ##################################################
 
         if train:
 
-            self.pairs = self.pairs[
+            self.pairs = pairs[
                 :train_images
             ]
 
         else:
 
-            self.pairs = self.pairs[
+            self.pairs = pairs[
                 train_images:
             ]
 
@@ -204,7 +231,6 @@ class ARADDataset(Dataset):
         )
 
         if hsi.max() > 1:
-
             hsi /= hsi.max()
 
         hsi = np.transpose(
