@@ -90,10 +90,10 @@ class ARADDataset(Dataset):
                     )
                 ])[:total_images]
 
-                files_to_download = (
-                    mat_files +
+                files_to_download = [
+                    mat_files,
                     rgb_files
-                )
+                ]
 
                 for file in files_to_download:
 
