@@ -36,7 +36,7 @@ class ARADDataset(Dataset):
 
         rgb_dir = os.path.join(
             root_dir,
-            "NTIRE2020_Train_RGB"
+            "NTIRE2020_Train_RealWorld"
         )
 
         os.makedirs(
