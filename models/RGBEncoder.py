@@ -5,6 +5,11 @@ class RGBEncoder(nn.Module):
 
     def __init__(self, latent_channels):
         super().__init__()
+        def __init__(
+            self,
+            in_channels=31,
+            latent_channels=8
+        ):
 
         self.net = nn.Sequential(
 
