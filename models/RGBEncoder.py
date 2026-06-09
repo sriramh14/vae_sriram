@@ -5,14 +5,14 @@ class RGBEncoder(nn.Module):
 
     def __init__(
         self,
-        in_channels=31,
+        in_channels=3
         latent_channels=8
     ):
         super().__init__()
 
         self.net = nn.Sequential(
 
-            nn.Conv2d(3, 64, 4, stride=2, padding=1),
+            nn.Conv2d(in_channels, 64, 4, stride=2, padding=1),
             nn.ReLU(inplace=True),
 
             ResidualBlock(64),
