@@ -276,10 +276,15 @@ for epoch in range(NUM_EPOCHS):
         best_mrae = val_mrae
 
         torch.save(
-            rgb_encoder.state_dict(),
+        {
+            "rgb_encoder": rgb_encoder.state_dict(),
+            "hsi_decoder": hsi_decoder.state_dict(),
+            "val_mrae": val_mrae,
+            "epoch": epoch
+        },
             os.path.join(
                 CHECKPOINT_DIR,
-                "rgb_encoder_best.pth"
+                "rgb_to_hsi_best.pth"
             )
         )
 
