@@ -158,10 +158,10 @@ class ARADDataset(Dataset):
         cube = cube.astype(
             np.float32
         )
+        #Placeholder normalisation (incorrect)
+        #if cube.max() > 1:
 
-        if cube.max() > 1:
-
-            cube /= cube.max()
+            #cube /= cube.max()
 
         cube = np.transpose(
             cube,
